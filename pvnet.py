@@ -2,6 +2,8 @@ import torch.nn as nn
 import numpy as np
 import torch
 import math
+import cv2
+np.set_printoptions(threshold=10000000)
 
 
 def conv3x3(in_planes, out_planes, stride=1, dilation=1):
@@ -73,8 +75,7 @@ class ResNet(nn.Module):
         self.inplanes = 64
         self.fully_conv = fully_conv
         super(ResNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
-                               bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -251,8 +252,38 @@ class Resnet18_8s(nn.Module):
 
 
 if __name__ == '__main__':
+    image = cv2.imread('pictures/000012.jpg')
+    img = cv2.resize(image, dsize=(640, 480))
+    img = np.expand_dims(img, 0)
+    img = img.astype(np.float32)
+    img = img.transpose([0, 3, 1, 2])
+    img = torch.tensor(img)
+    img = img.cuda()
+
     net = Resnet18_8s(18, 2)
     # print(net)
     pretrained_model =torch.load('models/299.pth')
-    print(pretrained_model)
-    net.load_state_dict({'Resnet18_8s': pretrained_model['net']})
+    #print(pretrained_model)
+    net.load_state_dict(pretrained_model)
+    net.cuda()
+
+    seg_pred, ver_pred = net(img)
+    seg_pred = seg_pred.cpu().detach().numpy()
+    seg_pred = seg_pred.reshape([2, 480, 640])
+    seg_pred = seg_pred.transpose([1, 2, 0])
+    cv2.imwrite('pictures/predict0.png', seg_pred[:, :, 0])
+    cv2.imwrite('pictures/predict1.png', seg_pred[:, :, 1])
+    #print(seg_pred[:, :, 0])
+    
+    #torch.save(net, 'models/net299.pth')
+
+
+
+
+
+
+
+
+
+
+
